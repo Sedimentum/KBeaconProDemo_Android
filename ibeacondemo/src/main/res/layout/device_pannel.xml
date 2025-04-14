@@ -110,6 +110,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="0.9"
+                        android:enabled="false"
                         android:maxLines="1"
                         android:textSize="14sp" />
 
@@ -134,7 +135,7 @@
                         android:id="@+id/editIBeaconMajor"
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"
-                        android:hint="0~65535"
+                        android:enabled="false"
                         android:inputType="number" />
 
 
@@ -157,8 +158,25 @@
                         android:id="@+id/editIBeaconMinor"
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"
-                        android:hint="0~65535"
+                        android:editable="false"
+                        android:enabled="false"
                         android:inputType="number" />
+
+                    <TextView
+                        android:id="@+id/beacon_minor2"
+                        android:layout_width="83dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Next minor:"
+                        android:textAlignment="center" />
+
+                    <EditText
+                        android:id="@+id/editSelectMinor"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:inputType="number" />
+
                 </LinearLayout>
             </LinearLayout>
 
@@ -193,15 +211,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.25"
+                    android:enabled="false"
                     android:inputType="number"
                     android:textSize="14sp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.45"
-                    android:text="@string/BEACON_ADV_PRD_EXP"
-                    android:textSize="12sp" />
 
 
             </LinearLayout>
@@ -226,6 +238,7 @@
                     android:id="@+id/editBeaconTxPower"
                     android:layout_width="100dp"
                     android:layout_height="wrap_content"
+                    android:enabled="false"
                     android:inputType="number" />
 
 
@@ -251,16 +264,11 @@
                     android:id="@+id/editBeaconname"
                     android:layout_width="150dp"
                     android:layout_height="wrap_content"
+                    android:enabled="false"
                     android:inputType="text"
                     android:lines="1"
                     android:maxLines="1"
                     android:textSize="14sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/BEACON_NAME_EXP"
-                    android:textSize="12sp" />
 
             </LinearLayout>
 
@@ -268,31 +276,7 @@
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:weightSum="1.0">
-
-
-                <!-- Appring text -->
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/BEACON_OLD_PWD" />
-
-                <EditText
-                    android:id="@+id/editPassword"
-                    android:layout_width="150dp"
-                    android:layout_height="wrap_content"
-                    android:lines="1"
-                    android:maxLines="1"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/BEACON_PWD_EXP"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
+                android:weightSum="1.0"/>
 
 
 
@@ -342,12 +326,6 @@
                     android:layout_height="50dp"
                     android:text="@string/reset_device_btn_title" />
 
-                <Button
-                    android:id="@+id/enableBtnTrigger"
-                    android:layout_width="wrap_content"
-                    android:layout_height="50dp"
-                    android:text="@string/enable_btn_trigger" />
-
 
             </LinearLayout>
 
@@ -357,16 +335,7 @@
                 android:layout_marginTop="0dp"
                 android:gravity="center|center_horizontal|center_vertical"
                 android:orientation="horizontal"
-                android:weightSum="1.0">
-
-                <Button
-                    android:id="@+id/beacon2TLM"
-                    android:layout_width="wrap_content"
-                    android:layout_height="50dp"
-                    android:text="@string/update_ibeacon_2_tlm" />
-
-
-            </LinearLayout>
+                android:weightSum="1.0"/>
 
 
         </LinearLayout>

@@ -125,7 +125,7 @@
     <string name="BEACON_NEW_PWD">Change Password:</string>
     <string name="BEACON_NEW_PWD_EXP">(6 character)</string>
 
-    <string name="BEACON_DOWNLOAD">Download configruation</string>
+    <string name="BEACON_DOWNLOAD">Upload Config</string>
 
     <string name="DISCOVER_SRV">DiscoverServing</string>
     <string name="devMenuUpload">Save</string>
@@ -243,7 +243,7 @@
     <string name="double_click_quit">Double click to quit app</string>
 
     <string name="test_command">Other test command:</string>
-    <string name="reset_device_btn_title">Reset configuration</string>
+    <string name="reset_device_btn_title">Reset beacon config</string>
 
     <string name="enable_btn_trigger">Enable Btn Trigger</string>
     <string name="enable_th_trigger">Enable T&amp;H Trigger</string>

@@ -61,17 +61,20 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
     private String mDeviceAddress;
     private KBeacon mBeacon;
 
+    private static int minor = 123;
+
     //uiview
     private TextView mBeaconType, mBeaconStatus;
     private TextView mBeaconModel;
     private EditText mEditBeaconUUID;
     private EditText mEditBeaconMajor;
     private EditText mEditBeaconMinor;
+    private EditText mEditSelectMinor;
     private EditText mEditBeaconAdvPeriod;
     private EditText mEditBeaconPassword;
     private EditText mEditBeaconTxPower;
     private EditText mEditBeaconName;
-    private Button mDownloadButton, mTriggerButton, mResetButton;
+    private Button mDownloadButton, mResetButton;
     private String mNewPassword;
     SharePreferenceMgr mPref;
 
@@ -96,17 +99,20 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
         mEditBeaconUUID = (EditText)findViewById(R.id.editIBeaconUUID);
         mEditBeaconMajor = (EditText)findViewById(R.id.editIBeaconMajor);
         mEditBeaconMinor = (EditText)findViewById(R.id.editIBeaconMinor);
+        mEditSelectMinor = (EditText)findViewById(R.id.editSelectMinor);
         mEditBeaconAdvPeriod = (EditText)findViewById(R.id.editBeaconAdvPeriod);
         mEditBeaconTxPower = (EditText)findViewById(R.id.editBeaconTxPower);
         mEditBeaconName = (EditText)findViewById(R.id.editBeaconname);
+
         mDownloadButton = (Button) findViewById(R.id.buttonSaveData);
-        mEditBeaconPassword = (EditText)findViewById(R.id.editPassword);
         mDownloadButton.setEnabled(false);
         mDownloadButton.setOnClickListener(this);
 
         mResetButton = (Button) findViewById(R.id.resetConfigruation);
+        mResetButton.setEnabled(false);
         mResetButton.setOnClickListener(this);
-        findViewById(R.id.beacon2TLM).setOnClickListener(this);
+
+         mEditSelectMinor.setText(String.valueOf(minor));
     }
 
     @Override
@@ -148,563 +154,10 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
         int id = v.getId();
         if (id == R.id.buttonSaveData) {
             updateViewToDevice();
-        }else if (id == R.id.enableBtnTrigger) {
-            enableButtonTrigger();
-        }else if (id == R.id.beacon2TLM) {
-            updateKBeaconToIBeaconAndTLM();
         }else if (id == R.id.resetConfigruation) {
             resetParameters();
         }
     }
-
-    //example, update common para
-    public void updateBeaconCommonPara() {
-        if (!mBeacon.isConnected()) {
-            return;
-        }
-
-        //change parameters
-        KBCfgCommon newCommomCfg = new KBCfgCommon();
-
-        //set device name
-        newCommomCfg.setName("KBeaconDemo");
-
-        //set device to always power on
-        //the autoAdvAfterPowerOn is enable, the device will not allowed power off by long press button
-        newCommomCfg.setAlwaysPowerOn(true);
-
-        //the password length must >=8 bytes and <= 16 bytes
-        //Be sure to remember your new password, if you forget it, you won’t be able to connect to it.
-        //newCommomCfg.setPassword("123456789");
-
-        ArrayList<KBCfgBase> cfgList = new ArrayList<>(1);
-        cfgList.add(newCommomCfg);
-        mBeacon.modifyConfig(cfgList, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                mDownloadButton.setEnabled(true);
-                if (bConfigSuccess)
-                {
-                    toastShow("config data to beacon success");
-                }
-                else
-                {
-                    if (error.errorCode == KBErrorCode.CfgBusy) {
-                        Log.e(LOG_TAG, "Device was busy, Maybe another configuration is not complete");
-                    }else if (error.errorCode == KBErrorCode.CfgTimeout){
-                        Log.e(LOG_TAG, "Sending parameters to device timeout");
-                    }
-
-                    toastShow("config failed for error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    //example: set device broadcasting iBeacon packet at SLOT0
-    void updateKBeaconToCodePhyAdvertisement()
-    {
-        if (!mBeacon.isConnected())
-        {
-            Log.v(LOG_TAG, "device was disconnected");
-            return;
-        }
-
-        //check if KBeacon support long range or 2Mbps feature
-        KBCfgCommon cfgCommon = mBeacon.getCommonCfg();
-        if (cfgCommon == null || !cfgCommon.isSupportBLELongRangeAdv()){
-            Log.v(LOG_TAG, "device does not support long range feature");
-            return;
-        }
-
-        //check if your phone can support code phy, this step is optional.
-        // Warning: If your phone does not support code phy, and you enable the device’s code phy broadcast,
-        // your phone will not be able to scan the EddyTLM signal.
-        if (!mBeaconMgr.isLeCodedPhySupported()){
-            Log.e(LOG_TAG, "You phone does not support long range feature, and you device will not scan the KSensor advertisement");
-        }
-
-        //set the device to connectable.
-        KBCfgAdvIBeacon iBeaconCfg = new KBCfgAdvIBeacon();
-        iBeaconCfg.setSlotIndex(0);
-        iBeaconCfg.setAdvMode(KBAdvMode.Legacy);
-        iBeaconCfg.setAdvConnectable(true);
-        iBeaconCfg.setAdvTriggerOnly(false);
-        iBeaconCfg.setAdvPeriod(1280.0f);
-        iBeaconCfg.setTxPower(KBAdvTxPower.RADIO_0dBm);
-        iBeaconCfg.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-        iBeaconCfg.setMajorID(645);
-        iBeaconCfg.setMinorID(741);
-
-        //set slot 1 for advertisement long range advertisement
-        KBCfgAdvEddyTLM tlmAdvCfg = new KBCfgAdvEddyTLM();
-        tlmAdvCfg.setSlotIndex(1);
-        tlmAdvCfg.setAdvMode(KBAdvMode.LongRangeCodedS8);
-        tlmAdvCfg.setAdvConnectable(true);
-        tlmAdvCfg.setAdvTriggerOnly(false);
-        tlmAdvCfg.setAdvPeriod(5000.0f);
-        tlmAdvCfg.setTxPower(KBAdvTxPower.RADIO_Pos4dBm);
-
-        ArrayList<KBCfgBase> cfgList = new ArrayList<>(2);
-        cfgList.add(iBeaconCfg);
-        cfgList.add(tlmAdvCfg);
-
-        mBeacon.modifyConfig(cfgList, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess)
-                {
-                    toastShow("Enable iBeacon and Long range advertisement success");
-                }
-                else
-                {
-                    toastShow("Enable iBeacon and Long range advertisement failed:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    //example: set device broadcasting iBeacon packet at SLOT0
-    void updateKBeaconToIBeacon()
-    {
-        if (!mBeacon.isConnected())
-        {
-            return;
-        }
-
-        KBCfgAdvIBeacon iBeaconCfg = new KBCfgAdvIBeacon();
-
-        //slot index
-        iBeaconCfg.setSlotIndex(0);
-        iBeaconCfg.setAdvMode(KBAdvMode.Legacy);
-
-        //set the device to connectable.
-        iBeaconCfg.setAdvConnectable(true);
-
-        //always advertisement
-        iBeaconCfg.setAdvTriggerOnly(false);
-
-        //adv period and tx power
-        iBeaconCfg.setAdvPeriod(1280.0f);
-        iBeaconCfg.setTxPower(KBAdvTxPower.RADIO_Neg4dBm);
-
-        //iBeacon para
-        iBeaconCfg.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-        iBeaconCfg.setMajorID(645);
-        iBeaconCfg.setMinorID(741);
-
-        mBeacon.modifyConfig(iBeaconCfg, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess)
-                {
-                    toastShow("config data to beacon success");
-                }
-                else
-                {
-                    toastShow("config failed for error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    /**
-     *  Example: Beacon broadcasts 5 seconds every 2 minutes in Slot1.
-     *  The advertisement interval is 1 second in advertisement period.
-     *  That is, the Beacon sleeps for 115 seconds and then broadcasts for 5 seconds.
-     */
-    void setSlot0PeriodicIBeaconAdv()
-    {
-        if (!mBeacon.isConnected())
-        {
-            Log.v(LOG_TAG, "device was disconnected");
-            return;
-        }
-
-        //check if KBeacon support long range or 2Mbps feature
-        KBCfgCommon cfgCommon = mBeacon.getCommonCfg();
-        if (cfgCommon == null || !cfgCommon.isSupportIBeacon()){
-            Log.v(LOG_TAG, "device does not support iBeacon advertisement");
-            return;
-        }
-
-        if (!cfgCommon.isSupportTrigger(KBTriggerType.PeriodicallyEvent)){
-            Log.v(LOG_TAG, "device does not support Periodically Event");
-            return;
-        }
-
-        // setting slot1 parameters.
-        KBCfgAdvIBeacon periodicAdv = new KBCfgAdvIBeacon();
-        periodicAdv.setSlotIndex(1);
-        //set adv period, unit is ms
-        periodicAdv.setAdvPeriod(1000f);
-        periodicAdv.setTxPower(KBAdvTxPower.RADIO_0dBm);
-        periodicAdv.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-
-        //This parameter is very important, indicating that slot1 does
-        // not broadcast by default and only broadcasts when triggered by a Trigger.
-        periodicAdv.setAdvTriggerOnly(true);
-
-        //add periodically trigger
-        KBCfgTrigger periodicTrigger = new KBCfgTrigger(0, KBTriggerType.PeriodicallyEvent);
-        periodicTrigger.setTriggerAction(KBTriggerAction.Advertisement);
-        periodicTrigger.setTriggerAdvSlot(1);  //trigger slot 1 advertisement
-        periodicTrigger.setTriggerAdvTime(5); //set adv duration to 5 seconds
-
-        //set trigger period, unit is ms
-        periodicTrigger.setTriggerPara(120*1000);
-
-        ArrayList<KBCfgBase> cfgList = new ArrayList<>(2);
-        cfgList.add(periodicAdv);
-        cfgList.add(periodicTrigger);
-        mBeacon.modifyConfig(cfgList, (bConfigSuccess, error) -> {
-            if (bConfigSuccess)
-            {
-                toastShow("Enable periodically advertisement success");
-            }
-            else
-            {
-                toastShow("Enable periodically advertisement failed:" + error.errorCode);
-            }
-        });
-    }
-
-    //example: set device broadcasting encrypt UUID
-    void setSlot0AdvEncrypt()
-    {
-        if (!mBeacon.isConnected())
-        {
-            Log.v(LOG_TAG, "device was disconnected");
-            return;
-        }
-
-        //check if KBeacon support long range or 2Mbps feature
-        KBCfgCommon cfgCommon = mBeacon.getCommonCfg();
-        if (cfgCommon == null || !cfgCommon.isSupportEBeacon()){
-            Log.v(LOG_TAG, "device does not support encrypt advertisement");
-            return;
-        }
-
-        //set basic parameters.
-        KBCfgAdvEBeacon encAdv = new KBCfgAdvEBeacon();
-        encAdv.setSlotIndex(0);
-        encAdv.setAdvPeriod(1000f);
-        encAdv.setTxPower(KBAdvTxPower.RADIO_0dBm);
-
-        //set the UUID that to be encrypt
-        encAdv.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-
-        //Set the AES KEY to change every 5 seconds.
-        encAdv.setEncryptInterval(5);
-
-        //set aes type to 0(ECB)
-        encAdv.setAesType(KBCfgAdvEBeacon.AES_ECB_TYPE);
-
-        mBeacon.modifyConfig(encAdv, (bConfigSuccess, error) -> {
-            if (bConfigSuccess)
-            {
-                toastShow("Enable encrypt advertisement success");
-            }
-            else
-            {
-                toastShow("Enable encrypt advertisement failed:" + error.errorCode);
-            }
-        });
-    }
-
-    //example: check if parameters changed
-    void updateModifyParaToDevice()
-    {
-        if (!mBeacon.isConnected())
-        {
-            return;
-        }
-
-        //First we get the current configuration of SLOT0, and then we only need to send the parameters that modified.
-        KBCfgAdvBase oldCfgPara = mBeacon.getSlotCfg(0);
-        if (oldCfgPara != null && oldCfgPara.getAdvType() == KBAdvType.IBeacon)
-        {
-            KBCfgAdvIBeacon oldIBeaconPara = (KBCfgAdvIBeacon) oldCfgPara;
-            boolean bModification = false;
-            KBCfgAdvIBeacon iBeaconCfg = new KBCfgAdvIBeacon();
-            iBeaconCfg.setSlotIndex(0);  //must be parameters
-
-            if (oldIBeaconPara.getAdvMode() != KBAdvMode.Legacy){
-                iBeaconCfg.setAdvMode(KBAdvMode.Legacy);
-                bModification = true;
-            }
-
-            if (!oldIBeaconPara.isAdvConnectable()){
-                iBeaconCfg.setAdvConnectable(true);
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.isAdvTriggerOnly()){
-                iBeaconCfg.setAdvTriggerOnly(false);
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.getAdvPeriod() != 1280.0f){
-                iBeaconCfg.setAdvPeriod(1280.0f);
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.getTxPower() != KBAdvTxPower.RADIO_Neg4dBm){
-                iBeaconCfg.setTxPower(KBAdvTxPower.RADIO_Neg4dBm);
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.getUuid().equals("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0")){
-                iBeaconCfg.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.getMajorID() != 645){
-                iBeaconCfg.setMinorID(645);
-                bModification = true;
-            }
-
-            if (oldIBeaconPara.getMinorID() != 741){
-                iBeaconCfg.setMinorID(741);
-                bModification = true;
-            }
-
-
-            //send parameters to device
-            if (bModification) {
-                mBeacon.modifyConfig(iBeaconCfg, new KBeacon.ActionCallback() {
-                    @Override
-                    public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                        if (bConfigSuccess) {
-                            toastShow("config data to beacon success");
-                        } else {
-                            toastShow("config failed for error:" + error.errorCode);
-                        }
-                    }
-                });
-            }else{
-                Log.v(LOG_TAG, "Parameters not change, not need to sending");
-            }
-        }
-        else
-        {
-            updateKBeaconToIBeacon();
-        }
-    }
-
-    //example: update KBeacon to broadcasting iBeacon at SLOT0 and EddyTLM at SLOT1
-    //sometimes we need KBeacon broadcasting both iBeacon and TLM packet (battery level, Temperature, power on times
-    void updateKBeaconToIBeaconAndTLM()
-    {
-        if (!mBeacon.isConnected())
-        {
-            return;
-        }
-
-        //iBeacon paramaters
-        KBCfgAdvIBeacon iBeaconCfg = new KBCfgAdvIBeacon();
-        iBeaconCfg.setSlotIndex(0);
-        iBeaconCfg.setAdvMode(KBAdvMode.Legacy);
-        iBeaconCfg.setTxPower(KBAdvTxPower.RADIO_Neg8dBm);
-        iBeaconCfg.setAdvPeriod(1280.0f);
-        iBeaconCfg.setAdvTriggerOnly(false);  //always advertisement
-        iBeaconCfg.setUuid("E2C56DB5-DFFB-48D2-B060-D0F5A71096E0");
-        iBeaconCfg.setMajorID(6545);
-        iBeaconCfg.setMinorID(1458);
-
-        //TLM parameters
-        KBCfgAdvEddyTLM tlmCfg = new KBCfgAdvEddyTLM();
-        tlmCfg.setSlotIndex(1);
-        tlmCfg.setAdvMode(KBAdvMode.Legacy);
-        tlmCfg.setTxPower(KBAdvTxPower.RADIO_0dBm);
-        tlmCfg.setAdvPeriod(8000.0f);
-        tlmCfg.setAdvTriggerOnly(false);  //always advertisement
-
-        //modify
-        ArrayList<KBCfgBase> cfgList = new ArrayList<>(2);
-        cfgList.add(iBeaconCfg);
-        cfgList.add(tlmCfg);
-        mBeacon.modifyConfig(cfgList, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess)
-                {
-                    toastShow("config data to beacon success");
-                }
-                else
-                {
-                    toastShow("config failed for error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    //example: set device broadcasting URL packet at SLOT0
-    void updateKBeaconToURL()
-    {
-        if (!mBeacon.isConnected())
-        {
-            return;
-        }
-
-        KBCfgAdvEddyURL urlCfg = new KBCfgAdvEddyURL();
-        urlCfg.setSlotIndex(0);
-        urlCfg.setAdvMode(KBAdvMode.Legacy);
-        urlCfg.setAdvConnectable(true);
-        urlCfg.setAdvTriggerOnly(false);
-        urlCfg.setAdvPeriod(1280.0f);
-        urlCfg.setTxPower(KBAdvTxPower.RADIO_Neg4dBm);
-
-        //URL para
-        urlCfg.setUrl("https://www.google.com/");
-
-        //send parameters to device
-        mBeacon.modifyConfig(urlCfg, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess)
-                {
-                    toastShow("config data to beacon success");
-                }
-                else
-                {
-                    toastShow("config failed for error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    //example: set device broadcasting UID packet at SLOT0
-    void updateKBeaconToUID()
-    {
-        if (!mBeacon.isConnected())
-        {
-            return;
-        }
-
-        KBCfgAdvEddyUID uidCfg = new KBCfgAdvEddyUID();
-        uidCfg.setSlotIndex(0);
-        uidCfg.setAdvMode(KBAdvMode.Legacy);
-        uidCfg.setAdvConnectable(true);
-        uidCfg.setAdvTriggerOnly(false);
-        uidCfg.setAdvPeriod(1280.0f);
-        uidCfg.setTxPower(KBAdvTxPower.RADIO_Neg4dBm);
-
-        //UID para
-        uidCfg.setNid("0x00010203040506070809");
-        uidCfg.setSid("0x010203040506");
-
-        //send parameters to device
-        mBeacon.modifyConfig(uidCfg, new KBeacon.ActionCallback() {
-            @Override
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess)
-                {
-                    toastShow("config data to beacon success");
-                }
-                else
-                {
-                    toastShow("config failed for error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    // The device always broadcast UUID B9407F30-F5F8-466E-AFF9-25556B57FE67. When device detects button press,
-    // it triggers the broadcast of the iBeacon message(uuid=B9407F30-F5F8-466E-AFF9-25556B570001) in Slot1,
-    // and the iBeacon broadcast duration is 10 seconds.
-    public void enableButtonTrigger() {
-        if (!mBeacon.isConnected()) {
-            toastShow("Device is not connected");
-            return;
-        }
-
-        //check device capability
-        final KBCfgCommon oldCommonCfg = (KBCfgCommon)mBeacon.getCommonCfg();
-        if (oldCommonCfg != null && !oldCommonCfg.isSupportButton())
-        {
-            toastShow("device is not support humidity");
-            return;
-        }
-
-        //set slot0 to always advertisement
-        final KBCfgAdvIBeacon iBeaconAdv = new KBCfgAdvIBeacon();
-        iBeaconAdv.setSlotIndex(0);  //reuse previous slot
-        iBeaconAdv.setAdvPeriod(1280f);
-        iBeaconAdv.setAdvMode(KBAdvMode.Legacy);
-        iBeaconAdv.setTxPower(KBAdvTxPower.RADIO_Neg4dBm);
-        iBeaconAdv.setAdvConnectable(true);
-        iBeaconAdv.setAdvTriggerOnly(false);  //always advertisement
-        iBeaconAdv.setUuid("B9407F30-F5F8-466E-AFF9-25556B57FE67");
-        iBeaconAdv.setMajorID(12);
-        iBeaconAdv.setMinorID(10);
-
-        //set slot 1 to trigger adv information
-        final KBCfgAdvIBeacon triggerAdv = new KBCfgAdvIBeacon();
-        triggerAdv.setSlotIndex(1);
-        triggerAdv.setAdvPeriod(211.25f);
-        triggerAdv.setAdvMode(KBAdvMode.Legacy);
-        triggerAdv.setTxPower(KBAdvTxPower.RADIO_Pos4dBm);
-        triggerAdv.setAdvConnectable(false);
-        triggerAdv.setAdvTriggerOnly(true);  //trigger only advertisement
-        triggerAdv.setUuid("B9407F30-F5F8-466E-AFF9-25556B570001");
-        triggerAdv.setMajorID(1);
-        triggerAdv.setMinorID(1);
-
-        //set trigger type
-        KBCfgTrigger btnTriggerPara = new KBCfgTrigger(0, KBTriggerType.BtnSingleClick);
-        btnTriggerPara.setTriggerAdvChangeMode(0);
-        btnTriggerPara.setTriggerAction(KBTriggerAction.Advertisement);
-        btnTriggerPara.setTriggerAdvSlot(1);
-        btnTriggerPara.setTriggerAdvTime(10);
-
-        //enable push button trigger
-        mTriggerButton.setEnabled(false);
-        ArrayList<KBCfgBase> cfgList = new ArrayList<>(2);
-        cfgList.add(iBeaconAdv);
-        cfgList.add(triggerAdv);
-        cfgList.add(btnTriggerPara);
-        this.mBeacon.modifyConfig(cfgList, new KBeacon.ActionCallback() {
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                mTriggerButton.setEnabled(true);
-                if (bConfigSuccess) {
-                    toastShow("enable push button trigger success");
-                } else {
-                    toastShow("enable push button trigger error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
-    public void disableButtonTrigger() {
-        if (!mBeacon.isConnected()) {
-            toastShow("Device is not connected");
-            return;
-        }
-
-        //check device capability
-        final KBCfgCommon oldCommonCfg = (KBCfgCommon)mBeacon.getCommonCfg();
-        if (oldCommonCfg != null && !oldCommonCfg.isSupportButton())
-        {
-            toastShow("device is not support humidity");
-            return;
-        }
-
-
-        //turn off trigger 0
-        KBCfgTrigger btnTriggerPara = new KBCfgTrigger(0, KBTriggerType.TriggerNull);
-        //disable push button trigger
-        this.mBeacon.modifyConfig(btnTriggerPara, new KBeacon.ActionCallback() {
-            public void onActionComplete(boolean bConfigSuccess, KBException error) {
-                if (bConfigSuccess) {
-                    toastShow("disable push button trigger success");
-                } else {
-                    toastShow("disable push button trigger error:" + error.errorCode);
-                }
-            }
-        });
-    }
-
 
     void updateViewToDevice()
     {
@@ -712,97 +165,69 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
         {
             return;
         }
-        KBCfgCommon oldCommonCfg = mBeacon.getCommonCfg();
+
         KBCfgAdvIBeacon iBeaconCfg = new KBCfgAdvIBeacon();
 
         //slot index
         iBeaconCfg.setSlotIndex(0);
+        // (not sure what this is)
         iBeaconCfg.setAdvMode(KBAdvMode.Legacy);
+        // lower advertising interval
+        iBeaconCfg.setAdvPeriod(400.0f);
+        // higher tx power
+        iBeaconCfg.setTxPower(4);
+        // shouldn't be connectable
+        iBeaconCfg.setAdvConnectable(true); // NOTE: not set to false
+        // always advertise
+        iBeaconCfg.setAdvTriggerOnly(false);
+        // iBeacon uuid data
+        iBeaconCfg.setUuid("9cbaf2ab-a69b-4e71-b622-fbf7d211e969");
+        // iBeacon major id data
+        iBeaconCfg.setMajorID(1);
+        // iBeacon minor id data
+        iBeaconCfg.setMinorID(Integer.valueOf(mEditSelectMinor.getText().toString()));
 
-        //set the device to un-connectable or connectable.
-        // Warning: if the app set the KBeacon to un-connectable, the app cannot connect to the device.
-        //When the device enters the unconnectable mode, you can enter it in the following ways:
-        //1. If the Button Trigger is not enabled, you can press the button of the device and the device will enter the connectable broadcast for 30 seconds.
-        //2. When the device is powered on again, the device will enter the connectable broadcast within 30 seconds after it is powered on.
-        iBeaconCfg.setAdvConnectable(true);
+        //add periodically trigger
+        KBCfgTrigger periodicTrigger = new KBCfgTrigger(0, KBTriggerType.BtnSingleClick);
+        periodicTrigger.setTriggerAction(KBTriggerAction.Advertisement);
+        periodicTrigger.setTriggerAdvSlot(0);
+        periodicTrigger.setTriggerAdvTime(10);
 
-        //When enabled, this slot does not broadcast by default, and it only broadcasts when the Trigger event is triggered.
-        iBeaconCfg.setAdvTriggerOnly(false); //always advertisement
-
-        //adv period, check if user change adv period
-        String strAdvPeriod = mEditBeaconAdvPeriod.getText().toString();
-        if (Utils.isPositiveInteger(strAdvPeriod)) {
-            Float newAdvPeriod = Float.valueOf(strAdvPeriod);
-            iBeaconCfg.setAdvPeriod(newAdvPeriod);
-        }
-
-        //tx power, check if user change tx power
-        String strTxPower = mEditBeaconTxPower.getText().toString();
-        if (Utils.isPositiveInteger(strTxPower) || Utils.isMinusInteger(strTxPower)) {
-            Integer newTxPower = Integer.valueOf(strTxPower);
-            if (newTxPower > oldCommonCfg.getMaxTxPower() || newTxPower < oldCommonCfg.getMinTxPower()) {
-                toastShow("tx power not valid");
-                return;
-            }
-            iBeaconCfg.setTxPower(newTxPower);
-        }
-
-        //iBeacon data
-        String uuid = mEditBeaconUUID.getText().toString();
-        if (KBUtility.isUUIDString(uuid)) {
-            iBeaconCfg.setUuid(uuid);
-        }else{
-            toastShow("UUID not valid");
-            return;
-        }
-
-        //iBeacon major id data
-        String strMajorID = mEditBeaconMajor.getText().toString();
-        if (Utils.isPositiveInteger(strMajorID))
-        {
-            Integer majorID = Integer.valueOf(strMajorID);
-            iBeaconCfg.setMajorID(majorID);
-        }
-
-        //iBeacon major id data
-        String strMinorID = mEditBeaconMinor.getText().toString();
-        if (Utils.isPositiveInteger(strMinorID))
-        {
-            Integer minorID = Integer.valueOf(strMinorID);
-            iBeaconCfg.setMinorID(minorID);
-        }
-
+        ArrayList<KBCfgBase> cfgList = new ArrayList<>(2);
+        cfgList.add(iBeaconCfg);
+        cfgList.add(periodicTrigger);
         mDownloadButton.setEnabled(false);
-        mBeacon.modifyConfig(iBeaconCfg, new KBeacon.ActionCallback() {
+        mBeacon.modifyConfig(cfgList, new KBeacon.ActionCallback() {
             @Override
             public void onActionComplete(boolean bConfigSuccess, KBException error) {
                 mDownloadButton.setEnabled(true);
                 if (bConfigSuccess)
                 {
-                    toastShow("config data to beacon success");
+                    toastShow("Beacon configured");
+                    updateDeviceToView();
+                    minor = Integer.valueOf(mEditSelectMinor.getText().toString()) + 1;
+                    mEditSelectMinor.setText(String.valueOf(minor));
                 }
                 else
                 {
                     if (error.errorCode == KBErrorCode.CfgBusy)
                     {
-                        toastShow("Another configruation is not complete");
+                        toastShow("Beacon configuration already in progress");
                     }
                     else
                     {
-                        toastShow("config failed for error:" + error.errorCode);
+                        toastShow("Failed to configure beacon: " + error.errorCode);
                     }
                 }
             }
         });
     }
 
-    //example: reset all parameters to default
     public void resetParameters() {
         if (!mBeacon.isConnected()) {
             return;
         }
 
-        mDownloadButton.setEnabled(false);
         JSONObject cmdPara = new JSONObject();
         try {
             cmdPara.put("msg", "admin");
@@ -821,11 +246,11 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
                 {
                     //disconnect with device to make sure the new parameters take effect
                     mBeacon.disconnect();
-                    toastShow("send reset command to beacon success");
+                    toastShow("Beacon config reset");
                 }
                 else
                 {
-                    toastShow("send reset command to beacon error:" + error.errorCode);
+                    toastShow("Failed to reset beacon config: " + error.errorCode);
                 }
             }
         });
@@ -878,7 +303,7 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
                 KBCfgAdvIBeacon iBeaconPara = (KBCfgAdvIBeacon)allIBeaconAdvs.get(0);
                 mEditBeaconUUID.setText(iBeaconPara.getUuid());
                 mEditBeaconMajor.setText(String.valueOf(iBeaconPara.getMajorID()));
-                mEditBeaconMinor.setText(String.valueOf(iBeaconPara.getMinorID()));
+                 mEditBeaconMinor.setText(String.valueOf(iBeaconPara.getMinorID()));
 
                 if (slot0Adv != null) {
                     mEditBeaconAdvPeriod.setText(String.valueOf(slot0Adv.getAdvPeriod()));
@@ -899,6 +324,7 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
             invalidateOptionsMenu();
 
             mDownloadButton.setEnabled(true);
+            mResetButton.setEnabled(true);
 
             updateDeviceToView();
 
@@ -952,6 +378,7 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
             }
 
             mDownloadButton.setEnabled(false);
+            mResetButton.setEnabled(false);
             Log.e(LOG_TAG, "device has disconnected:" +  nReason);
             invalidateOptionsMenu();
         }
